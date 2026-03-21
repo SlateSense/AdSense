@@ -37,7 +37,7 @@ export default function AIChatbot() {
 
       const data = await res.json()
       setMessages([...newMessages, { role: "assistant", content: data.message.content }])
-    } catch (error) {
+    } catch {
       setMessages([...newMessages, { role: "assistant", content: "Sorry, I encountered an error. Please try again later." }])
     } finally {
       setIsLoading(false)

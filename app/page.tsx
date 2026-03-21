@@ -1,5 +1,4 @@
 import { getAllPosts } from "@/lib/posts"
-import PostCard from "@/components/PostCard"
 import AdsSlot from "@/components/Ads"
 import TagFilter from "@/components/TagFilter"
 import CategoryFilter from "@/components/CategoryFilter"
