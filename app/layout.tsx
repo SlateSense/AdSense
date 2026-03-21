@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/react"
 import Link from "next/link"
 import { siteName, siteTagline } from "@/site.config"
 import AdsSlot from "@/components/Ads"
+import AIChatbot from "@/components/AIChatbot"
 
 export const metadata: Metadata = {
   title: `${siteName} — ${siteTagline}`,
@@ -46,6 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </div>
         </footer>
         <Analytics />
+        <AIChatbot />
       </body>
     </html>
   )

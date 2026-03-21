@@ -1,0 +1,9 @@
+{
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "regions": ["cle1"],
+  "env": {
+    "GROQ_MODEL": "mixtral-8x7b-32768"
+  }
+}
