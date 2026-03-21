@@ -1,0 +1,36 @@
+{
+  "name": "recoversmart",
+  "version": "0.1.0",
+  "private": true,
+  "description": "RecoverSmart — a clean, fast-loading daily blog with AI-generated posts.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@vercel/analytics": "^1.2.2",
+    "date-fns": "^3.6.0",
+    "gray-matter": "^4.0.3",
+    "next": "^14.2.5",
+    "github-slugger": "^2.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-markdown": "^9.0.1",
+    "remark-gfm": "^3.0.1",
+    "remark-slug": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "@types/react": "^18.2.66",
+    "@types/react-dom": "^18.2.22",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "^14.2.5",
+    "typescript": "^5.4.5"
+  },
+  "engines": {
+    "node": ">=18.17.0"
+  }
+}

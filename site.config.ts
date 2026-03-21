@@ -1,0 +1,5 @@
+export const siteName = "Spectra Star"
+export const siteTagline = "Daily smarter living: recovery, finance, crypto, motivation, gym"
+export const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://spectrastar.vercel.app"
+export const adsScriptUrl = process.env.NEXT_PUBLIC_ADS_SCRIPT_URL || ""
+export const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || ""

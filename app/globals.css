@@ -1,0 +1,65 @@
+:root {
+  --bg: #0a0c10;
+  --card: #111521;
+  --text: #e6e9f3;
+  --muted: #9fa6b9;
+  --brand: #7b5cff;
+  --link: #4aa8ff;
+}
+* { box-sizing: border-box }
+html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif }
+.container { max-width: 1100px; margin: 0 auto; padding: 0 20px }
+.header { border-bottom: 1px solid #171b29; background: linear-gradient(180deg, rgba(123,92,255,0.08), rgba(10,12,16,1)) }
+.header-inner { display: flex; align-items: center; justify-content: space-between; height: 68px }
+.brand { font-weight: 700; color: var(--text); text-decoration: none }
+.nav { display: flex; gap: 18px }
+.nav a { color: var(--muted); text-decoration: none }
+.nav a:hover { color: var(--text) }
+.hero { padding: 44px 0 24px; text-align: center }
+.hero h1 { font-size: 40px; margin: 0 0 10px; letter-spacing: -0.5px }
+.hero p { color: var(--muted); margin: 0 0 16px }
+.btn { display: inline-block; background: var(--brand); color: #0a0c10; font-weight: 600; border-radius: 10px; padding: 10px 16px; text-decoration: none }
+.btn:hover { opacity: 0.95 }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px }
+.card { background: var(--card); border: 1px solid #1c2133; border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 1px 0 #0a0c10, inset 0 0 0 1px #0a0c10 }
+.card img, .card picture { width: 100%; height: 180px; object-fit: cover; background: #0b0d11 }
+.card-content { padding: 14px 16px; display: flex; flex-direction: column; gap: 8px }
+.card-categories { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 4px }
+.category-badge { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--brand); background: rgba(123, 92, 255, 0.1); padding: 2px 6px; border-radius: 4px; letter-spacing: 0.5px }
+.card-title { font-weight: 600; color: var(--text); text-decoration: none }
+.card-meta { color: var(--muted); font-size: 12px }
+.tags { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 18px }
+.tag { font-size: 12px; color: var(--muted); border: 1px solid #1c2133; padding: 6px 8px; border-radius: 999px; cursor: pointer; user-select: none }
+.tag.active { color: #0a0c10; background: var(--brand); border-color: var(--brand) }
+.post { max-width: 820px; margin: 28px auto; padding: 0 8px }
+.post h1 { font-size: 36px; margin: 12px 0 }
+.post .meta { color: var(--muted); margin-bottom: 12px; display: flex; gap: 12px; align-items: center }
+.post .content { line-height: 1.7 }
+.post .content p { margin: 16px 0 }
+.post .share { margin-top: 16px; display: flex; gap: 12px; flex-wrap: wrap }
+.post-grid { align-items: start }
+.footer { border-top: 1px solid #1d2230; margin-top: 24px }
+.footer-inner { display: flex; align-items: center; justify-content: space-between; height: 76px }
+.footer-note { color: var(--muted) }
+.ads { display: flex; align-items: center; justify-content: center; background: #0b0d11; border: 1px dashed #202531; color: var(--muted); height: 90px; border-radius: 8px; margin: 12px 0 }
+.ads.inline { height: 120px }
+.ads.sidebar { height: 250px }
+.page { padding: 24px 0 }
+.page h1 { font-size: 28px }
+.muted { color: var(--muted) }
+
+/* Table of Contents */
+.toc-container { border: 1px solid #1c2133; border-radius: 10px; padding: 12px; background: var(--card); margin-bottom: 16px }
+.toc-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; background: none; border: none; color: var(--text); font-weight: 600; cursor: pointer; padding: 0 }
+.toc-toggle svg { display: none }
+.toc-list { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-direction: column; gap: 6px }
+.toc-item.depth-3 { margin-left: 12px }
+.toc-item a { color: var(--link); text-decoration: none; font-size: 14px }
+.toc-item a:hover { text-decoration: underline }
+
+@media (max-width: 768px) {
+  .post-grid { grid-template-columns: 1fr !important }
+  .toc-toggle svg { display: block }
+  .toc-content { display: none; margin-top: 12px; border-top: 1px solid #1c2133; padding-top: 12px }
+  .toc-container.is-open .toc-content { display: block }
+}
