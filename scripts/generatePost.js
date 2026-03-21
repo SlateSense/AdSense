@@ -156,8 +156,6 @@ async function main() {
     }))
   }
 
-  const newsContext = process.env.NEWS_CONTEXT || ""
-
   for (let i = 0; i < count; i++) {
     try {
       console.log(`Generating post ${i + 1}/${count}...`)
