@@ -1,6 +1,18 @@
 const fs = require("fs")
 const path = require("path")
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function parseRetryAfterMs(errorText) {
+  const match = String(errorText || "").match(/Please try again in\s+([0-9.]+)s/i)
+  if (!match) return 0
+  const seconds = Number(match[1])
+  if (!Number.isFinite(seconds) || seconds <= 0) return 0
+  return Math.ceil(seconds * 1000)
+}
+
 function slugify(text) {
   return text
     .toLowerCase()
@@ -22,24 +34,36 @@ async function requestGroqWithFallback(apiKey, bodyFactory) {
   const primaryModel = process.env.GROQ_MODEL || "llama-3.3-70b-versatile"
   const fallbackModel = process.env.GROQ_FALLBACK_MODEL || "llama-3.1-8b-instant"
   const models = Array.from(new Set([primaryModel, fallbackModel]))
+  const perModelRetryLimit = Number(process.env.GROQ_MODEL_RETRY_LIMIT || 4)
   let lastError = ""
 
   for (const model of models) {
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`
-      },
-      body: JSON.stringify(bodyFactory(model))
-    })
+    for (let attempt = 1; attempt <= perModelRetryLimit; attempt++) {
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`
+        },
+        body: JSON.stringify(bodyFactory(model))
+      })
 
-    if (res.ok) {
-      return res.json()
+      if (res.ok) {
+        return res.json()
+      }
+
+      const text = await res.text()
+      lastError = `model=${model} attempt=${attempt} status=${res.status} body=${text}`
+
+      if (res.status === 429) {
+        const waitMs = Math.max(parseRetryAfterMs(text), 2500) + Math.floor(Math.random() * 1200)
+        console.log(`Rate limit on ${model}. Waiting ${waitMs}ms before retry...`)
+        await sleep(waitMs)
+        continue
+      }
+
+      break
     }
-
-    const text = await res.text()
-    lastError = `model=${model} status=${res.status} body=${text}`
   }
 
   throw new Error(`Groq API error after fallback: ${lastError}`)
@@ -212,6 +236,7 @@ async function getNewsContext() {
 
 async function main() {
   const count = parseInt(process.argv[2]) || 1
+  const pauseBetweenPostsMs = Number(process.env.GENERATION_PAUSE_MS || 3500)
   console.log(`Generating ${count} posts...`)
   
   const newsContext = await getNewsContext()
@@ -233,13 +258,16 @@ async function main() {
     try {
       console.log(`Generating post ${i + 1}/${count}...`)
       const post = await generateWithGroq(existingPosts, newsContext)
-      const { file, slug } = writeMarkdown(post)
+      const { slug } = writeMarkdown(post)
       console.log(`Created: ${slug}`)
       createdCount += 1
       // Add new post to existing for subsequent generations in same run
       existingPosts.unshift({ slug, title: post.title })
     } catch (err) {
       console.error(`Error generating post ${i + 1}:`, err.message)
+    }
+    if (i < count - 1) {
+      await sleep(pauseBetweenPostsMs)
     }
   }
 

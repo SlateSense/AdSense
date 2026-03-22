@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '30 18 * * *'
   workflow_dispatch:
+    inputs:
+      post_count:
+        description: 'Number of posts to generate'
+        required: false
+        default: '8'
 
 permissions:
   contents: write
@@ -31,11 +36,14 @@ jobs:
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       - name: Generate posts
-        run: node scripts/generatePost.js 25
+        run: node scripts/generatePost.js "${POST_COUNT}"
         env:
+          POST_COUNT: ${{ github.event.inputs.post_count || vars.DAILY_POST_COUNT || '8' }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           GROQ_MODEL: ${{ secrets.GROQ_MODEL }}
           GROQ_FALLBACK_MODEL: ${{ secrets.GROQ_FALLBACK_MODEL }}
+          GROQ_MODEL_RETRY_LIMIT: ${{ vars.GROQ_MODEL_RETRY_LIMIT || '4' }}
+          GENERATION_PAUSE_MS: ${{ vars.GENERATION_PAUSE_MS || '4000' }}
           SITE_NICHE: ${{ secrets.SITE_NICHE }}
       - name: Commit and push
         run: |
