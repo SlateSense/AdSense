@@ -5,6 +5,9 @@ on:
     - cron: '30 18 * * *'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   generate:
     runs-on: ubuntu-latest
@@ -19,11 +22,20 @@ jobs:
           node-version: '20'
       - name: Install dependencies
         run: npm ci
+      - name: Validate configuration
+        run: |
+          if [ -z "${GROQ_API_KEY}" ]; then
+            echo "Missing GROQ_API_KEY secret"
+            exit 1
+          fi
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       - name: Generate posts
         run: node scripts/generatePost.js 25
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           GROQ_MODEL: ${{ secrets.GROQ_MODEL }}
+          GROQ_FALLBACK_MODEL: ${{ secrets.GROQ_FALLBACK_MODEL }}
           SITE_NICHE: ${{ secrets.SITE_NICHE }}
       - name: Commit and push
         run: |

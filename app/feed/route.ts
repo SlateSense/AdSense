@@ -5,7 +5,7 @@ export async function GET() {
   const posts = await getAllPosts()
   const feed = {
     version: "https://jsonfeed.org/version/1.1",
-    title: "Spectra Star",
+    title: "swatsense",
     home_page_url: site,
     feed_url: `${site}/feed`,
     description: "Daily smarter living: recovery, finance, crypto, motivation, gym",

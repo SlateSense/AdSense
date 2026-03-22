@@ -5,7 +5,7 @@ export default function AIChatbot() {
   const [isOpen, setIsOpen] = useState(false)
   const [input, setInput] = useState("")
   const [messages, setMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([
-    { role: "assistant", content: "Hi! I'm your Spectra Star AI assistant. How can I help you today?" }
+    { role: "assistant", content: "Hi! I'm your swatsense AI assistant. How can I help you today?" }
   ])
   const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -64,7 +64,7 @@ export default function AIChatbot() {
       {isOpen && (
         <div className="chat-window">
           <div className="chat-header">
-            <strong>Spectra AI Assistant</strong>
+            <strong>swatsense AI Assistant</strong>
           </div>
           <div className="chat-messages">
             {messages.map((m, i) => (

@@ -1,8 +1,8 @@
 {
-  "name": "recoversmart",
+  "name": "swatsense",
   "version": "0.1.0",
   "private": true,
-  "description": "RecoverSmart — a clean, fast-loading daily blog with AI-generated posts.",
+  "description": "swatsense — a clean, fast-loading daily blog with AI-generated posts.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

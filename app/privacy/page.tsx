@@ -16,7 +16,7 @@ export default function PrivacyPage() {
         third parties. You can disable cookies in your browser settings.
       </p>
       <p>
-        For inquiries, contact: admin@spectrastar.vercel.app
+        For inquiries, contact: admin@swatsense.vercel.app
       </p>
     </div>
   )

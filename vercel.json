@@ -4,6 +4,7 @@
   "framework": "nextjs",
   "regions": ["cle1"],
   "env": {
-    "GROQ_MODEL": "mixtral-8x7b-32768"
+    "GROQ_MODEL": "llama-3.3-70b-versatile",
+    "GROQ_FALLBACK_MODEL": "llama-3.1-8b-instant"
   }
 }

@@ -18,18 +18,44 @@ function todayInfo() {
   return { y, m, day, iso: `${y}-${m}-${day}` }
 }
 
+async function requestGroqWithFallback(apiKey, bodyFactory) {
+  const primaryModel = process.env.GROQ_MODEL || "llama-3.3-70b-versatile"
+  const fallbackModel = process.env.GROQ_FALLBACK_MODEL || "llama-3.1-8b-instant"
+  const models = Array.from(new Set([primaryModel, fallbackModel]))
+  let lastError = ""
+
+  for (const model of models) {
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`
+      },
+      body: JSON.stringify(bodyFactory(model))
+    })
+
+    if (res.ok) {
+      return res.json()
+    }
+
+    const text = await res.text()
+    lastError = `model=${model} status=${res.status} body=${text}`
+  }
+
+  throw new Error(`Groq API error after fallback: ${lastError}`)
+}
+
 async function generateWithGroq(existingPosts = [], newsContext = "") {
   const apiKey = process.env.GROQ_API_KEY
   if (!apiKey) throw new Error("Missing GROQ_API_KEY")
   const niche = process.env.SITE_NICHE || "recovery and saving tips for India with crypto safety and gym habits"
-  const model = process.env.GROQ_MODEL || "mixtral-8x7b-32768"
   
   const internalLinks = existingPosts
     .slice(0, 15)
     .map(p => `- ${p.title}: /posts/${p.slug}`)
     .join("\n")
 
-  const prompt = `You are an expert content creator for "Spectra Star", a premium daily blog.
+  const prompt = `You are an expert content creator for "swatsense", a premium daily blog.
 Your goal is to write a high-quality, SEO-optimized, and engaging article.
 
 CONSTRAINTS:
@@ -57,28 +83,15 @@ Return ONLY a JSON object with these keys:
 - categories: Array of 1-2 categories.
 - hero: A keyword-based Unsplash URL (e.g., "https://source.unsplash.com/1200x720/?bitcoin,finance").`
 
-  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.8,
-      messages: [
-        { role: "system", content: "You are a world-class SEO content writer. You output strictly valid JSON." },
-        { role: "user", content: prompt }
-      ],
-      response_format: { type: "json_object" }
-    })
-  })
-  
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`Groq API error: ${res.status} ${text}`)
-  }
-  const data = await res.json()
+  const data = await requestGroqWithFallback(apiKey, (model) => ({
+    model,
+    temperature: 0.8,
+    messages: [
+      { role: "system", content: "You are a world-class SEO content writer. You output strictly valid JSON." },
+      { role: "user", content: prompt }
+    ],
+    response_format: { type: "json_object" }
+  }))
   const content = data.choices?.[0]?.message?.content
   return JSON.parse(content)
 }
@@ -156,17 +169,23 @@ async function main() {
     }))
   }
 
+  let createdCount = 0
   for (let i = 0; i < count; i++) {
     try {
       console.log(`Generating post ${i + 1}/${count}...`)
       const post = await generateWithGroq(existingPosts, newsContext)
       const { file, slug } = writeMarkdown(post)
       console.log(`Created: ${slug}`)
+      createdCount += 1
       // Add new post to existing for subsequent generations in same run
       existingPosts.unshift({ slug, title: post.title })
     } catch (err) {
       console.error(`Error generating post ${i + 1}:`, err.message)
     }
+  }
+
+  if (createdCount === 0) {
+    throw new Error("No posts were generated successfully")
   }
 }
 
