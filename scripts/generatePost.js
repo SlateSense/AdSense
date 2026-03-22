@@ -45,55 +45,114 @@ async function requestGroqWithFallback(apiKey, bodyFactory) {
   throw new Error(`Groq API error after fallback: ${lastError}`)
 }
 
-async function generateWithGroq(existingPosts = [], newsContext = "") {
+function countWords(text) {
+  return String(text || "").trim().split(/\s+/).filter(Boolean).length
+}
+
+function countHeadings(markdown) {
+  const matches = String(markdown || "").match(/^##?\#?\s+/gm)
+  return matches ? matches.length : 0
+}
+
+function normalizePostShape(post) {
+  return {
+    title: String(post?.title || "").trim(),
+    description: String(post?.description || "").trim(),
+    content: String(post?.content || "").trim(),
+    tags: Array.isArray(post?.tags) ? post.tags.map((t) => String(t).trim()).filter(Boolean).slice(0, 12) : [],
+    categories: Array.isArray(post?.categories) ? post.categories.map((c) => String(c).trim()).filter(Boolean).slice(0, 2) : [],
+    hero: post?.hero ? String(post.hero) : ""
+  }
+}
+
+function validatePostQuality(post) {
+  const failures = []
+  const words = countWords(post.content)
+  const headings = countHeadings(post.content)
+  if (!post.title || post.title.length < 35) failures.push("Title is too short")
+  if (!post.description || post.description.length < 130 || post.description.length > 170) failures.push("Description length is out of range")
+  if (words < 1100) failures.push(`Content is too short (${words} words)`)
+  if (headings < 5) failures.push(`Not enough section headings (${headings})`)
+  if (!post.content.includes("[[AFFILIATE_LINK:Amazon]]")) failures.push("Missing Amazon placeholder")
+  if (!post.content.includes("[[AFFILIATE_LINK:Flipkart]]")) failures.push("Missing Flipkart placeholder")
+  if (!post.content.includes("[[AFFILIATE_LINK:Exchange]]")) failures.push("Missing Exchange placeholder")
+  if (/for more information, check out our/i.test(post.content)) failures.push("Contains weak generic cross-linking phrase")
+  if (post.categories.length === 0) failures.push("Missing categories")
+  if (post.tags.length < 6) failures.push("Not enough tags")
+  return failures
+}
+
+function buildPrompt({ niche, newsContext, internalLinks, qualityFeedback }) {
+  return `You are an expert content creator for "swatsense", a premium daily blog.
+Write one coherent, high-value article for Indian readers.
+
+EDITORIAL REQUIREMENTS:
+- Pick one primary angle only (example: crypto safety OR debt recovery OR budgeting discipline).
+- You may use one secondary angle briefly, but do not mix many themes.
+- Keep the narrative practical and realistic, not generic.
+- Use concrete Indian context examples with numbers (rupees, timelines, realistic scenarios).
+- Avoid fluffy lines and avoid vague phrases like "for more information check our content".
+- Internal links must be naturally embedded in sentences, not dumped.
+
+FORMAT REQUIREMENTS:
+- 1100-1600 words in Markdown.
+- Clear structure with H2/H3 headings.
+- Short paragraphs, bullet points, numbered steps.
+- Include one section called "7-Day Action Plan".
+- Include one section called "Common Mistakes to Avoid".
+- Include one bold blockquote with a strong takeaway.
+- Insert exactly these three placeholders once each:
+  [[AFFILIATE_LINK:Amazon]]
+  [[AFFILIATE_LINK:Flipkart]]
+  [[AFFILIATE_LINK:Exchange]]
+
+SITE NICHE: ${niche}
+NEWS CONTEXT: ${newsContext || "None"}
+
+INTERNAL LINKS (use 2-3 naturally):
+${internalLinks || "None available"}
+
+${qualityFeedback ? `QUALITY FEEDBACK FROM PREVIOUS ATTEMPT:\n${qualityFeedback}\n` : ""}
+Return ONLY valid JSON with keys:
+title, description, content, tags (array 6-12), categories (array 1-2), hero.`
+}
+
+async function generateWithGroq(existingPosts = [], newsContext = "", maxAttempts = 3) {
   const apiKey = process.env.GROQ_API_KEY
   if (!apiKey) throw new Error("Missing GROQ_API_KEY")
   const niche = process.env.SITE_NICHE || "recovery and saving tips for India with crypto safety and gym habits"
-  
   const internalLinks = existingPosts
     .slice(0, 15)
     .map(p => `- ${p.title}: /posts/${p.slug}`)
     .join("\n")
-
-  const prompt = `You are an expert content creator for "swatsense", a premium daily blog.
-Your goal is to write a high-quality, SEO-optimized, and engaging article.
-
-CONSTRAINTS:
-- Write one unique article in Markdown.
-- Tone: Professional yet conversational, motivational, finance-smart, India-centric.
-- Length: 1000–1500 words.
-- Format: Use H2/H3 headers, short paragraphs, bullet points, numbered lists, and at least one bold blockquote callout.
-- Categories: Choose 1-2 relevant categories (e.g., Finance, Crypto, Health, Motivation, Tech).
-- Internal Linking: Weave in at least 2-3 natural references to our existing content using the provided list below.
-- News Integration: If relevant news context is provided, naturally weave it into the article to make it timely.
-- Affiliate Links: Insert exactly three affiliate placeholders: [[AFFILIATE_LINK:Amazon]], [[AFFILIATE_LINK:Flipkart]], [[AFFILIATE_LINK:Exchange]].
-- Visuals: Suggest a keyword for a hero image from Unsplash.
-
-SITE NICHE: ${niche}
-NEWS CONTEXT (Use if relevant): ${newsContext}
-
-EXISTING CONTENT FOR INTERNAL LINKS (Use 2-3):
-${internalLinks}
-
-Return ONLY a JSON object with these keys:
-- title: Captivating, SEO-friendly title.
-- description: Compelling meta description (150-160 chars).
-- content: The full Markdown body.
-- tags: Array of 6-12 relevant tags.
-- categories: Array of 1-2 categories.
-- hero: A keyword-based Unsplash URL (e.g., "https://source.unsplash.com/1200x720/?bitcoin,finance").`
-
-  const data = await requestGroqWithFallback(apiKey, (model) => ({
-    model,
-    temperature: 0.8,
-    messages: [
-      { role: "system", content: "You are a world-class SEO content writer. You output strictly valid JSON." },
-      { role: "user", content: prompt }
-    ],
-    response_format: { type: "json_object" }
-  }))
-  const content = data.choices?.[0]?.message?.content
-  return JSON.parse(content)
+  let qualityFeedback = ""
+  let lastError = ""
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const prompt = buildPrompt({ niche, newsContext, internalLinks, qualityFeedback })
+      const data = await requestGroqWithFallback(apiKey, (model) => ({
+        model,
+        temperature: 0.6,
+        messages: [
+          { role: "system", content: "You are a strict editorial AI. Output only valid JSON." },
+          { role: "user", content: prompt }
+        ],
+        response_format: { type: "json_object" }
+      }))
+      const content = data.choices?.[0]?.message?.content
+      const parsed = normalizePostShape(JSON.parse(content))
+      const failures = validatePostQuality(parsed)
+      if (failures.length === 0) {
+        return parsed
+      }
+      qualityFeedback = failures.join("; ")
+      lastError = `quality_check_failed: ${qualityFeedback}`
+    } catch (err) {
+      lastError = err.message
+      qualityFeedback = `Technical failure: ${err.message}`
+    }
+  }
+  throw new Error(`Failed to generate a quality post after retries: ${lastError}`)
 }
 
 function writeMarkdown(post) {

@@ -19,13 +19,13 @@ export type Post = PostSummary & {
 const POSTS_DIR = path.join(process.cwd(), "content", "posts")
 
 function replaceAffiliateTokens(markdown: string) {
-  const amazon = process.env.NEXT_PUBLIC_AFFILIATE_AMAZON_URL || ""
-  const flipkart = process.env.NEXT_PUBLIC_AFFILIATE_FLIPKART_URL || ""
-  const exchange = process.env.NEXT_PUBLIC_AFFILIATE_EXCHANGE_URL || ""
+  const amazon = process.env.NEXT_PUBLIC_AFFILIATE_AMAZON_URL || "https://www.amazon.in/"
+  const flipkart = process.env.NEXT_PUBLIC_AFFILIATE_FLIPKART_URL || "https://www.flipkart.com/"
+  const exchange = process.env.NEXT_PUBLIC_AFFILIATE_EXCHANGE_URL || "https://www.coindcx.com/"
   return markdown
-    .replace(/\[\[AFFILIATE_LINK:Amazon\]\]/g, amazon || "#")
-    .replace(/\[\[AFFILIATE_LINK:Flipkart\]\]/g, flipkart || "#")
-    .replace(/\[\[AFFILIATE_LINK:Exchange\]\]/g, exchange || "#")
+    .replace(/\[\[AFFILIATE_LINK:Amazon\]\]/g, amazon)
+    .replace(/\[\[AFFILIATE_LINK:Flipkart\]\]/g, flipkart)
+    .replace(/\[\[AFFILIATE_LINK:Exchange\]\]/g, exchange)
 }
 
 export async function getAllPosts(): Promise<PostSummary[]> {
