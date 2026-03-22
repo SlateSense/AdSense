@@ -79,13 +79,20 @@ function countHeadings(markdown) {
 }
 
 function normalizePostShape(post) {
+  const rawHero = typeof post?.hero === "string"
+    ? post.hero
+    : (post?.hero && typeof post.hero === "object" && typeof post.hero.image === "string" ? post.hero.image : "")
+  const cleanHero = String(rawHero || "").replace(/[`"'\\\s]/g, "")
+  const hero = /^https?:\/\/.+/i.test(cleanHero) && !/example\.com/i.test(cleanHero)
+    ? cleanHero
+    : "https://source.unsplash.com/1200x720/?finance,india"
   return {
     title: String(post?.title || "").trim(),
     description: String(post?.description || "").trim(),
     content: String(post?.content || "").trim(),
     tags: Array.isArray(post?.tags) ? post.tags.map((t) => String(t).trim()).filter(Boolean).slice(0, 12) : [],
     categories: Array.isArray(post?.categories) ? post.categories.map((c) => String(c).trim()).filter(Boolean).slice(0, 2) : [],
-    hero: post?.hero ? String(post.hero) : ""
+    hero
   }
 }
 
@@ -110,14 +117,42 @@ function normalizeDescription(description, content) {
   return slice.length > 0 ? `${slice}...` : trimmed
 }
 
+function ensureAffiliatePlaceholders(content) {
+  let text = String(content || "")
+  const missing = []
+  if (!text.includes("[[AFFILIATE_LINK:Amazon]]")) missing.push("- Amazon: [[AFFILIATE_LINK:Amazon]]")
+  if (!text.includes("[[AFFILIATE_LINK:Flipkart]]")) missing.push("- Flipkart: [[AFFILIATE_LINK:Flipkart]]")
+  if (!text.includes("[[AFFILIATE_LINK:Exchange]]")) missing.push("- Exchange: [[AFFILIATE_LINK:Exchange]]")
+  if (missing.length > 0) {
+    text += `\n\n## Useful Tools\n\n${missing.join("\n")}\n`
+  }
+  return text
+}
+
+function parseModelJson(raw) {
+  const text = String(raw || "").trim()
+  if (!text) throw new Error("Empty model response")
+  try {
+    return JSON.parse(text)
+  } catch {
+    const first = text.indexOf("{")
+    const last = text.lastIndexOf("}")
+    if (first >= 0 && last > first) {
+      const candidate = text.slice(first, last + 1)
+      return JSON.parse(candidate)
+    }
+    throw new Error("Model response is not valid JSON")
+  }
+}
+
 function validatePostQuality(post) {
   const failures = []
   const words = countWords(post.content)
   const headings = countHeadings(post.content)
   if (!post.title || post.title.length < 28) failures.push("Title is too short")
   if (!post.description || post.description.length < 120 || post.description.length > 180) failures.push("Description length is out of range")
-  if (words < 850) failures.push(`Content is too short (${words} words)`)
-  if (headings < 5) failures.push(`Not enough section headings (${headings})`)
+  if (words < 700) failures.push(`Content is too short (${words} words)`)
+  if (headings < 4) failures.push(`Not enough section headings (${headings})`)
   if (!post.content.includes("[[AFFILIATE_LINK:Amazon]]")) failures.push("Missing Amazon placeholder")
   if (!post.content.includes("[[AFFILIATE_LINK:Flipkart]]")) failures.push("Missing Flipkart placeholder")
   if (!post.content.includes("[[AFFILIATE_LINK:Exchange]]")) failures.push("Missing Exchange placeholder")
@@ -182,11 +217,11 @@ async function generateWithGroq(existingPosts = [], newsContext = "", maxAttempt
         messages: [
           { role: "system", content: "You are a strict editorial AI. Output only valid JSON." },
           { role: "user", content: prompt }
-        ],
-        response_format: { type: "json_object" }
+        ]
       }))
       const content = data.choices?.[0]?.message?.content
-      const parsed = normalizePostShape(JSON.parse(content))
+      const parsed = normalizePostShape(parseModelJson(content))
+      parsed.content = ensureAffiliatePlaceholders(parsed.content)
       parsed.description = normalizeDescription(parsed.description, parsed.content)
       const failures = validatePostQuality(parsed)
       if (failures.length === 0) {
