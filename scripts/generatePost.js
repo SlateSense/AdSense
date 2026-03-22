@@ -89,13 +89,34 @@ function normalizePostShape(post) {
   }
 }
 
+function cleanMarkdownToText(markdown) {
+  return String(markdown || "")
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`[^`]*`/g, " ")
+    .replace(/\!\[[^\]]*\]\([^)]+\)/g, " ")
+    .replace(/\[[^\]]+\]\([^)]+\)/g, " ")
+    .replace(/^#+\s*/gm, "")
+    .replace(/[*_>~-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
+function normalizeDescription(description, content) {
+  const trimmed = String(description || "").trim()
+  if (trimmed.length >= 130 && trimmed.length <= 170) return trimmed
+  const text = cleanMarkdownToText(content)
+  if (!text) return trimmed
+  const slice = text.slice(0, 157).trim()
+  return slice.length > 0 ? `${slice}...` : trimmed
+}
+
 function validatePostQuality(post) {
   const failures = []
   const words = countWords(post.content)
   const headings = countHeadings(post.content)
-  if (!post.title || post.title.length < 35) failures.push("Title is too short")
-  if (!post.description || post.description.length < 130 || post.description.length > 170) failures.push("Description length is out of range")
-  if (words < 1100) failures.push(`Content is too short (${words} words)`)
+  if (!post.title || post.title.length < 28) failures.push("Title is too short")
+  if (!post.description || post.description.length < 120 || post.description.length > 180) failures.push("Description length is out of range")
+  if (words < 850) failures.push(`Content is too short (${words} words)`)
   if (headings < 5) failures.push(`Not enough section headings (${headings})`)
   if (!post.content.includes("[[AFFILIATE_LINK:Amazon]]")) failures.push("Missing Amazon placeholder")
   if (!post.content.includes("[[AFFILIATE_LINK:Flipkart]]")) failures.push("Missing Flipkart placeholder")
@@ -157,6 +178,7 @@ async function generateWithGroq(existingPosts = [], newsContext = "", maxAttempt
       const data = await requestGroqWithFallback(apiKey, (model) => ({
         model,
         temperature: 0.6,
+        max_tokens: 3200,
         messages: [
           { role: "system", content: "You are a strict editorial AI. Output only valid JSON." },
           { role: "user", content: prompt }
@@ -165,6 +187,7 @@ async function generateWithGroq(existingPosts = [], newsContext = "", maxAttempt
       }))
       const content = data.choices?.[0]?.message?.content
       const parsed = normalizePostShape(JSON.parse(content))
+      parsed.description = normalizeDescription(parsed.description, parsed.content)
       const failures = validatePostQuality(parsed)
       if (failures.length === 0) {
         return parsed
